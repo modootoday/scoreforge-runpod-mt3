@@ -1,0 +1,16 @@
+# MT3 RunPod Worker Dependencies
+# Last updated: 2024-12
+# NOTE: MT3 requires complex JAX/T5X setup - this is a placeholder
+
+# RunPod serverless SDK
+runpod==1.7.7
+
+# HTTP requests for downloading audio
+requests==2.32.3
+
+# Audio processing
+librosa==0.10.2.post1
+numpy==1.26.4
+
+# MIDI handling
+note-seq==0.0.5
