@@ -3,7 +3,7 @@
 # Supports: Piano, Strings, Winds, Brass, Percussion, and more
 
 # Use NVIDIA CUDA with Python for JAX GPU support
-FROM nvidia/cuda:12.1.1-cudnn8-runtime-ubuntu22.04
+FROM nvidia/cuda:12.1.1-cudnn8-devel-ubuntu22.04
 
 WORKDIR /app
 
@@ -17,12 +17,15 @@ ENV PYTHONDONTWRITEBYTECODE=1
 ENV XLA_PYTHON_CLIENT_PREALLOCATE=false
 ENV XLA_PYTHON_CLIENT_MEM_FRACTION=0.8
 
-# Install Python 3.10 and system dependencies
+# Install Python 3.11 (required by Flax >= 0.8) and system dependencies
 RUN apt-get update && apt-get install -y --no-install-recommends \
-    python3.10 \
-    python3.10-dev \
+    software-properties-common \
+    && add-apt-repository ppa:deadsnakes/ppa -y \
+    && apt-get update && apt-get install -y --no-install-recommends \
+    python3.11 \
+    python3.11-dev \
+    python3.11-venv \
     python3-pip \
-    python3.10-venv \
     git \
     wget \
     curl \
@@ -32,16 +35,15 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     libfluidsynth3 \
     build-essential \
     && rm -rf /var/lib/apt/lists/* \
-    && ln -sf /usr/bin/python3.10 /usr/bin/python3 \
-    && ln -sf /usr/bin/python3.10 /usr/bin/python
+    && ln -sf /usr/bin/python3.11 /usr/bin/python3 \
+    && ln -sf /usr/bin/python3.11 /usr/bin/python
 
 # Upgrade pip
 RUN python -m pip install --upgrade pip setuptools wheel
 
-# Install JAX with CUDA support first (before other dependencies)
+# Install JAX with CUDA 12 support
 RUN pip install --no-cache-dir \
-    "jax[cuda12]==0.4.23" \
-    "jaxlib==0.4.23+cuda12.cudnn89" \
+    "jax[cuda12_pip]" \
     -f https://storage.googleapis.com/jax-releases/jax_cuda_releases.html
 
 # Install T5X and dependencies
