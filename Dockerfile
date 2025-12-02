@@ -60,8 +60,11 @@ RUN pip install --no-cache-dir \
     -f https://storage.googleapis.com/jax-releases/jax_cuda_releases.html
 
 # Install T5X with --no-deps to avoid overwriting our pinned versions
-RUN git clone --branch=main https://github.com/google-research/t5x.git /tmp/t5x && \
+# CRITICAL: Use specific commit BEFORE airio dependency was added
+# Commit 2e05ad41 is from jsphweid/mt3-docker, known to work with MT3
+RUN git clone https://github.com/google-research/t5x.git /tmp/t5x && \
     cd /tmp/t5x && \
+    git checkout 2e05ad41778c25521738418de805757bf2e41e9e && \
     pip install --no-cache-dir --no-deps -e . && \
     rm -rf /tmp/t5x/.git
 
