@@ -25,7 +25,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     python3.11 \
     python3.11-dev \
     python3.11-venv \
-    python3-pip \
+    python3.11-distutils \
     git \
     wget \
     curl \
@@ -38,15 +38,11 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     && ln -sf /usr/bin/python3.11 /usr/bin/python3 \
     && ln -sf /usr/bin/python3.11 /usr/bin/python
 
-# Upgrade pip
+# Install pip for Python 3.11
+RUN curl -sS https://bootstrap.pypa.io/get-pip.py | python3.11
 RUN python -m pip install --upgrade pip setuptools wheel
 
-# Install JAX with CUDA 12 support
-RUN pip install --no-cache-dir \
-    "jax[cuda12_pip]" \
-    -f https://storage.googleapis.com/jax-releases/jax_cuda_releases.html
-
-# Install T5X and dependencies
+# Install T5X and MT3 first (they have older dependency requirements)
 # Clone and install T5X with modified setup (jax instead of jax[tpu])
 RUN git clone --branch=main https://github.com/google-research/t5x.git /tmp/t5x && \
     cd /tmp/t5x && \
@@ -59,6 +55,12 @@ RUN git clone --branch=main https://github.com/magenta/mt3.git /tmp/mt3 && \
     cd /tmp/mt3 && \
     pip install --no-cache-dir -e . && \
     rm -rf /tmp/mt3/.git
+
+# Now upgrade JAX and ml_dtypes to compatible versions (override T5X's old versions)
+RUN pip install --no-cache-dir --upgrade \
+    "ml_dtypes>=0.5.0" \
+    "jax[cuda12_pip]>=0.4.20" \
+    -f https://storage.googleapis.com/jax-releases/jax_cuda_releases.html
 
 # Install additional dependencies
 COPY requirements.txt .
