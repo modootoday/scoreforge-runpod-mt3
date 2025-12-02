@@ -71,17 +71,37 @@ RUN git clone --branch=main https://github.com/magenta/mt3.git /tmp/mt3 && \
     pip install --no-cache-dir --no-deps -e . && \
     rm -rf /tmp/mt3/.git
 
-# Install remaining dependencies (audio processing, etc.)
+# Install protobuf first (use version compatible with TF 2.11)
+RUN pip install --no-cache-dir "protobuf==3.20.3"
+
+# Install audio processing dependencies
 RUN pip install --no-cache-dir \
     "librosa==0.10.1" \
     "soundfile==0.12.1" \
-    "note-seq==0.0.5" \
     "gin-config==0.5.0" \
     "pyfluidsynth==1.3.2" \
-    "nest-asyncio==1.6.0" \
-    "seqio==0.0.18" \
-    "t5==0.9.4" \
-    "tensorflow-text==2.11.0"
+    "nest-asyncio==1.6.0"
+
+# Install note-seq with --no-deps to avoid protobuf conflict
+RUN pip install --no-cache-dir --no-deps "note-seq==0.0.5"
+
+# Install seqio and t5 with --no-deps
+RUN pip install --no-cache-dir --no-deps "seqio==0.0.18" "t5==0.9.4"
+
+# Install tensorflow-text matching TF version
+RUN pip install --no-cache-dir "tensorflow-text==2.11.0"
+
+# Install missing dependencies for note-seq/seqio manually
+RUN pip install --no-cache-dir \
+    "pretty-midi>=0.2.6" \
+    "intervaltree>=2.1.0" \
+    "pandas>=0.18.1" \
+    "bokeh>=0.12.0" \
+    "pydub" \
+    "mir_eval" \
+    "editdistance" \
+    "sentencepiece" \
+    "tfds-nightly"
 
 # Install RunPod SDK and HTTP
 RUN pip install --no-cache-dir \
