@@ -91,7 +91,9 @@ RUN pip install --no-cache-dir --no-deps "seqio==0.0.18" "t5==0.9.4"
 # Install tensorflow-text matching TF version
 RUN pip install --no-cache-dir "tensorflow-text==2.11.0"
 
-# Install missing dependencies for note-seq/seqio manually
+# Install missing dependencies for note-seq/seqio/t5 manually
+# These are transitive dependencies that were skipped with --no-deps
+# Note: Use tensorflow-datasets instead of tfds-nightly to avoid protobuf conflicts
 RUN pip install --no-cache-dir \
     "pretty-midi>=0.2.6" \
     "intervaltree>=2.1.0" \
@@ -103,7 +105,14 @@ RUN pip install --no-cache-dir \
     "sentencepiece" \
     "tensorflow-datasets==4.9.2" \
     "pyglove" \
-    "ipython"
+    "ipython" \
+    "babel" \
+    "immutabledict" \
+    "rouge-score" \
+    "sacrebleu"
+
+# Install mesh-tensorflow with --no-deps (it has complex TF dependencies)
+RUN pip install --no-cache-dir --no-deps "mesh-tensorflow"
 
 # Install RunPod SDK and HTTP
 RUN pip install --no-cache-dir \
@@ -131,21 +140,36 @@ RUN ls -la /models/ && \
 # Copy handler
 COPY handler.py .
 
+# Print build environment info
+RUN echo "=== Build Environment ===" && \
+    cat /etc/os-release | head -5 && \
+    python --version && \
+    nvcc --version 2>/dev/null || echo "NVCC not in PATH (OK for build)" && \
+    echo "========================="
+
 # Verify versions are correct
 RUN python -c "\
 import numpy; print(f'numpy: {numpy.__version__}'); \
 import tensorflow; print(f'tensorflow: {tensorflow.__version__}'); \
 import jax; print(f'jax: {jax.__version__}'); \
 import flax; print(f'flax: {flax.__version__}'); \
+import google.protobuf; print(f'protobuf: {google.protobuf.__version__}'); \
 "
 
 # Verify JAX works (CPU mode during build)
 RUN JAX_PLATFORMS=cpu python -c "import jax; print('JAX import OK')"
 
-# Verify MT3 imports work
+# Verify MT3 imports work (step by step for debugging)
 RUN JAX_PLATFORMS=cpu python -c "\
-from mt3 import models, network, spectrograms, vocabularies; \
-print('MT3 imports successful'); \
+print('Testing imports...'); \
+import t5; print('  t5 OK'); \
+import seqio; print('  seqio OK'); \
+import note_seq; print('  note_seq OK'); \
+from mt3 import spectrograms; print('  mt3.spectrograms OK'); \
+from mt3 import vocabularies; print('  mt3.vocabularies OK'); \
+from mt3 import network; print('  mt3.network OK'); \
+from mt3 import models; print('  mt3.models OK'); \
+print('MT3 imports successful!'); \
 "
 
 # RunPod serverless entrypoint
