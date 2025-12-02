@@ -101,7 +101,7 @@ RUN pip install --no-cache-dir \
     "mir_eval" \
     "editdistance" \
     "sentencepiece" \
-    "tfds-nightly"
+    "tensorflow-datasets==4.9.2"
 
 # Install RunPod SDK and HTTP
 RUN pip install --no-cache-dir \
@@ -110,6 +110,10 @@ RUN pip install --no-cache-dir \
 
 # Install gsutil for downloading models
 RUN pip install --no-cache-dir gsutil
+
+# CRITICAL: Force protobuf back to 3.20.x LAST (some packages upgrade it)
+# This must be the final pip install to ensure TF 2.11 compatibility
+RUN pip install --no-cache-dir --force-reinstall "protobuf==3.20.1"
 
 # Download MT3 model checkpoints from Google Cloud Storage
 RUN mkdir -p /models && \
