@@ -86,11 +86,12 @@ RUN pip install --no-cache-dir --force-reinstall --no-deps "ml_dtypes==0.5.0" &&
 RUN python -c "import ml_dtypes; print(f'ml_dtypes version: {ml_dtypes.__version__}')" && \
     python -c "import jax; print(f'JAX version: {jax.__version__}')"
 
-# Verify JAX can see GPU (will show CPU if no GPU during build, that's OK)
-RUN python -c "import jax; print(f'JAX devices: {jax.devices()}'); print(f'Backend: {jax.default_backend()}')"
+# Skip GPU verification during build (no GPU available in build environment)
+# GPU will be available at runtime on RunPod
+RUN JAX_PLATFORMS=cpu python -c "import jax; print(f'JAX version: {jax.__version__}'); print('JAX import OK - GPU will be used at runtime')"
 
-# Verify MT3 imports work
-RUN python -c "\
+# Verify MT3 imports work (use CPU mode during build)
+RUN JAX_PLATFORMS=cpu python -c "\
 from mt3 import models, network, spectrograms, vocabularies; \
 print('MT3 imports successful'); \
 "
