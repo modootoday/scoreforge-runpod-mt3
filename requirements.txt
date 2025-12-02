@@ -1,16 +1,28 @@
 # MT3 RunPod Worker Dependencies
 # Last updated: 2024-12
-# NOTE: MT3 requires complex JAX/T5X setup - this is a placeholder
 
 # RunPod serverless SDK
 runpod==1.7.7
 
-# HTTP requests for downloading audio
+# HTTP requests for downloading audio and Supabase uploads
 requests==2.32.3
 
 # Audio processing
 librosa==0.10.2.post1
+soundfile==0.12.1
 numpy==1.26.4
 
 # MIDI handling
 note-seq==0.0.5
+
+# TensorFlow (for note-seq compatibility, CPU only - JAX handles GPU)
+tensorflow-cpu==2.15.0
+
+# Gin configuration (required by MT3/T5X)
+gin-config==0.5.0
+
+# FluidSynth Python bindings (for MIDI synthesis)
+pyfluidsynth==1.3.2
+
+# Async support
+nest-asyncio==1.6.0
