@@ -44,14 +44,14 @@ RUN python -m pip install --upgrade pip setuptools wheel
 
 # Install core dependencies with PINNED versions that work together
 # This is the critical step - all versions must be mutually compatible
-# JAX 0.3.15 + T5X commit 2e05ad41 is the proven combination from jsphweid/mt3-docker
-# Note: Using older JAX/Flax because T5X 2e05ad41 uses jax.experimental.global_device_array
+# JAX 0.3.x + T5X commit 2e05ad41 + Flax 0.5.3 (last version with flax.optim)
+# Reference: https://github.com/google/flax/issues/2273
 RUN pip install --no-cache-dir \
     "numpy==1.23.5" \
     "scipy==1.10.1" \
     "tensorflow==2.11.0" \
-    "flax==0.6.3" \
-    "optax==0.1.4" \
+    "flax==0.5.3" \
+    "optax==0.1.3" \
     "chex==0.1.5" \
     "orbax==0.0.2" \
     "clu==0.0.7" \
