@@ -76,21 +76,33 @@ RUN ls -la /models/ && \
 # Copy handler
 COPY handler.py .
 
-# CRITICAL: Downgrade Flax ecosystem to versions compatible with JAX 0.4.x
-# The latest T5X installs flax 0.12+ which requires JAX 0.8+, but CUDA 12 local only supports JAX 0.4.x
+# Fix dependency conflicts: pin numpy and protobuf for tensorflow compatibility
+# Then install JAX with CUDA support (bundled CUDA libs, no local CUDA needed)
+RUN pip install --no-cache-dir \
+    "numpy==1.26.4" \
+    "protobuf>=3.20.3,<5.0.0"
+
+# Install JAX 0.4.35 with bundled CUDA 12 (works without system CUDA)
+RUN pip install --no-cache-dir \
+    "jax[cuda12_pip]==0.4.35" \
+    -f https://storage.googleapis.com/jax-releases/jax_cuda_releases.html
+
+# Downgrade Flax ecosystem to be compatible with JAX 0.4.35
+# T5X uses optax.ConditionallyTransformState which was added in optax 0.1.8+
 RUN pip install --no-cache-dir --force-reinstall \
     "flax==0.8.5" \
     "orbax-checkpoint==0.5.23" \
     "chex==0.1.86" \
-    "optax==0.2.2" \
-    "ml_dtypes==0.4.0" \
-    "jax[cuda12_local]==0.4.30"
+    "optax==0.1.9" \
+    "ml_dtypes==0.4.0"
 
 # Verify versions are correct
 RUN python -c "\
+import numpy; print(f'numpy: {numpy.__version__}'); \
 import ml_dtypes; print(f'ml_dtypes: {ml_dtypes.__version__}'); \
 import jax; print(f'jax: {jax.__version__}'); \
 import flax; print(f'flax: {flax.__version__}'); \
+import optax; print(f'optax: {optax.__version__}'); \
 "
 
 # Skip GPU verification during build (no GPU available in build environment)
