@@ -101,7 +101,8 @@ RUN pip install --no-cache-dir \
     "mir_eval" \
     "editdistance" \
     "sentencepiece" \
-    "tensorflow-datasets==4.9.2"
+    "tensorflow-datasets==4.9.2" \
+    "pyglove"
 
 # Install RunPod SDK and HTTP
 RUN pip install --no-cache-dir \
