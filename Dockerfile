@@ -102,7 +102,8 @@ RUN pip install --no-cache-dir \
     "editdistance" \
     "sentencepiece" \
     "tensorflow-datasets==4.9.2" \
-    "pyglove"
+    "pyglove" \
+    "ipython"
 
 # Install RunPod SDK and HTTP
 RUN pip install --no-cache-dir \
