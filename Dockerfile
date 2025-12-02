@@ -76,19 +76,26 @@ RUN ls -la /models/ && \
 # Copy handler
 COPY handler.py .
 
-# CRITICAL: Force upgrade JAX and ml_dtypes LAST (after ALL other installs)
-# This ensures nothing can overwrite these versions
-# Use jax[cuda12_local] for pre-installed CUDA (RunPod has CUDA in base image)
-RUN pip install --no-cache-dir --force-reinstall --no-deps "ml_dtypes==0.5.0" && \
-    pip install --no-cache-dir --upgrade "jax[cuda12_local]==0.4.30"
+# CRITICAL: Downgrade Flax ecosystem to versions compatible with JAX 0.4.x
+# The latest T5X installs flax 0.12+ which requires JAX 0.8+, but CUDA 12 local only supports JAX 0.4.x
+RUN pip install --no-cache-dir --force-reinstall \
+    "flax==0.8.5" \
+    "orbax-checkpoint==0.5.23" \
+    "chex==0.1.86" \
+    "optax==0.2.2" \
+    "ml_dtypes==0.4.0" \
+    "jax[cuda12_local]==0.4.30"
 
-# Verify ml_dtypes version is correct
-RUN python -c "import ml_dtypes; print(f'ml_dtypes version: {ml_dtypes.__version__}')" && \
-    python -c "import jax; print(f'JAX version: {jax.__version__}')"
+# Verify versions are correct
+RUN python -c "\
+import ml_dtypes; print(f'ml_dtypes: {ml_dtypes.__version__}'); \
+import jax; print(f'jax: {jax.__version__}'); \
+import flax; print(f'flax: {flax.__version__}'); \
+"
 
 # Skip GPU verification during build (no GPU available in build environment)
 # GPU will be available at runtime on RunPod
-RUN JAX_PLATFORMS=cpu python -c "import jax; print(f'JAX version: {jax.__version__}'); print('JAX import OK - GPU will be used at runtime')"
+RUN JAX_PLATFORMS=cpu python -c "import jax; print('JAX import OK - GPU will be used at runtime')"
 
 # Verify MT3 imports work (use CPU mode during build)
 RUN JAX_PLATFORMS=cpu python -c "\
