@@ -78,11 +78,9 @@ COPY handler.py .
 
 # CRITICAL: Force upgrade JAX and ml_dtypes LAST (after ALL other installs)
 # This ensures nothing can overwrite these versions
+# Use jax[cuda12_local] for pre-installed CUDA (RunPod has CUDA in base image)
 RUN pip install --no-cache-dir --force-reinstall --no-deps "ml_dtypes==0.5.0" && \
-    pip install --no-cache-dir --upgrade \
-    "jax[cuda12]==0.4.35" \
-    "jaxlib[cuda12_cudnn89]==0.4.35" \
-    -f https://storage.googleapis.com/jax-releases/jax_cuda_releases.html
+    pip install --no-cache-dir --upgrade "jax[cuda12_local]==0.4.30"
 
 # Verify ml_dtypes version is correct
 RUN python -c "import ml_dtypes; print(f'ml_dtypes version: {ml_dtypes.__version__}')" && \
