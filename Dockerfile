@@ -56,13 +56,7 @@ RUN git clone --branch=main https://github.com/magenta/mt3.git /tmp/mt3 && \
     pip install --no-cache-dir -e . && \
     rm -rf /tmp/mt3/.git
 
-# Now upgrade JAX and ml_dtypes to compatible versions (override T5X's old versions)
-RUN pip install --no-cache-dir --upgrade \
-    "ml_dtypes>=0.5.0" \
-    "jax[cuda12_pip]>=0.4.20" \
-    -f https://storage.googleapis.com/jax-releases/jax_cuda_releases.html
-
-# Install additional dependencies
+# Install additional dependencies BEFORE JAX upgrade
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
@@ -81,6 +75,18 @@ RUN ls -la /models/ && \
 
 # Copy handler
 COPY handler.py .
+
+# CRITICAL: Force upgrade JAX and ml_dtypes LAST (after ALL other installs)
+# This ensures nothing can overwrite these versions
+RUN pip install --no-cache-dir --force-reinstall --no-deps "ml_dtypes==0.5.0" && \
+    pip install --no-cache-dir --upgrade \
+    "jax[cuda12]==0.4.35" \
+    "jaxlib[cuda12_cudnn89]==0.4.35" \
+    -f https://storage.googleapis.com/jax-releases/jax_cuda_releases.html
+
+# Verify ml_dtypes version is correct
+RUN python -c "import ml_dtypes; print(f'ml_dtypes version: {ml_dtypes.__version__}')" && \
+    python -c "import jax; print(f'JAX version: {jax.__version__}')"
 
 # Verify JAX can see GPU (will show CPU if no GPU during build, that's OK)
 RUN python -c "import jax; print(f'JAX devices: {jax.devices()}'); print(f'Backend: {jax.default_backend()}')"
