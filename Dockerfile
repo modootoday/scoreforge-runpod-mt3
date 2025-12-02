@@ -44,19 +44,19 @@ RUN python -m pip install --upgrade pip setuptools wheel
 
 # Install core dependencies with PINNED versions that work together
 # This is the critical step - all versions must be mutually compatible
-# JAX 0.4.13 is the last version that works well with TF 2.11 and older Flax
+# JAX 0.3.15 + T5X commit 2e05ad41 is the proven combination from jsphweid/mt3-docker
+# Note: Using older JAX/Flax because T5X 2e05ad41 uses jax.experimental.global_device_array
 RUN pip install --no-cache-dir \
     "numpy==1.23.5" \
     "scipy==1.10.1" \
     "tensorflow==2.11.0" \
-    "flax==0.6.10" \
-    "optax==0.1.5" \
-    "chex==0.1.7" \
-    "orbax-checkpoint==0.2.3" \
-    "clu==0.0.8" \
-    "ml_dtypes==0.2.0" \
-    "jax==0.4.13" \
-    "jaxlib==0.4.13+cuda11.cudnn86" \
+    "flax==0.6.3" \
+    "optax==0.1.4" \
+    "chex==0.1.5" \
+    "orbax==0.0.2" \
+    "clu==0.0.7" \
+    "jax==0.3.25" \
+    "jaxlib==0.3.25+cuda11.cudnn82" \
     -f https://storage.googleapis.com/jax-releases/jax_cuda_releases.html
 
 # Install T5X with --no-deps to avoid overwriting our pinned versions
