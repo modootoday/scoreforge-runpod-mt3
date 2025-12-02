@@ -44,6 +44,7 @@ RUN python -m pip install --upgrade pip setuptools wheel
 
 # Install core dependencies with PINNED versions that work together
 # This is the critical step - all versions must be mutually compatible
+# JAX 0.4.13 is the last version that works well with TF 2.11 and older Flax
 RUN pip install --no-cache-dir \
     "numpy==1.23.5" \
     "scipy==1.10.1" \
@@ -53,9 +54,9 @@ RUN pip install --no-cache-dir \
     "chex==0.1.7" \
     "orbax-checkpoint==0.2.3" \
     "clu==0.0.8" \
-    "ml_dtypes==0.1.0" \
-    "jax==0.4.8" \
-    "jaxlib==0.4.7+cuda11.cudnn86" \
+    "ml_dtypes==0.2.0" \
+    "jax==0.4.13" \
+    "jaxlib==0.4.13+cuda11.cudnn86" \
     -f https://storage.googleapis.com/jax-releases/jax_cuda_releases.html
 
 # Install T5X with --no-deps to avoid overwriting our pinned versions
