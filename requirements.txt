@@ -1,29 +1,12 @@
 # MT3 RunPod Worker Dependencies
-# Last updated: 2024-12
+# Note: Most dependencies are installed directly in Dockerfile
+# with pinned versions for compatibility.
+# This file is kept for reference only.
 
-# RunPod serverless SDK
-runpod==1.7.7
-
-# HTTP requests for downloading audio and Supabase uploads
-requests==2.32.3
-
-# Audio processing
-librosa==0.10.2.post1
-soundfile==0.12.1
-numpy==1.26.4
-
-# MIDI handling
-note-seq==0.0.5
-
-# TensorFlow (for note-seq compatibility, CPU only - JAX handles GPU)
-# Pin to 2.15.x for ml_dtypes 0.4.0 compatibility
-tensorflow-cpu==2.15.1
-
-# Gin configuration (required by MT3/T5X)
-gin-config==0.5.0
-
-# FluidSynth Python bindings (for MIDI synthesis)
-pyfluidsynth==1.3.2
-
-# Async support
-nest-asyncio==1.6.0
+# Core dependencies are installed in Dockerfile:
+# - numpy==1.23.5
+# - tensorflow==2.11.0
+# - jax==0.4.8 + jaxlib==0.4.7+cuda11.cudnn86
+# - flax==0.6.10
+# - t5x (from git)
+# - mt3 (from git)

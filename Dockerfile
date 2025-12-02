@@ -1,9 +1,11 @@
 # RunPod Serverless Worker for MT3
 # Google Magenta's Multi-Task Multitrack Music Transcription
 # Supports: Piano, Strings, Winds, Brass, Percussion, and more
+#
+# Strategy: Use CUDA 11.8 base + Python 3.10 + pinned legacy versions
+# MT3/T5X are legacy projects that require older package versions
 
-# Use NVIDIA CUDA with Python for JAX GPU support
-FROM nvidia/cuda:12.1.1-cudnn8-devel-ubuntu22.04
+FROM nvidia/cuda:11.8.0-cudnn8-devel-ubuntu22.04
 
 WORKDIR /app
 
@@ -17,15 +19,12 @@ ENV PYTHONDONTWRITEBYTECODE=1
 ENV XLA_PYTHON_CLIENT_PREALLOCATE=false
 ENV XLA_PYTHON_CLIENT_MEM_FRACTION=0.8
 
-# Install Python 3.11 (required by Flax >= 0.8) and system dependencies
+# Install Python 3.10 and system dependencies
 RUN apt-get update && apt-get install -y --no-install-recommends \
-    software-properties-common \
-    && add-apt-repository ppa:deadsnakes/ppa -y \
-    && apt-get update && apt-get install -y --no-install-recommends \
-    python3.11 \
-    python3.11-dev \
-    python3.11-venv \
-    python3.11-distutils \
+    python3.10 \
+    python3.10-dev \
+    python3.10-venv \
+    python3-pip \
     git \
     wget \
     curl \
@@ -34,36 +33,65 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     fluidsynth \
     libfluidsynth3 \
     build-essential \
+    libasound2-dev \
+    libjack-dev \
     && rm -rf /var/lib/apt/lists/* \
-    && ln -sf /usr/bin/python3.11 /usr/bin/python3 \
-    && ln -sf /usr/bin/python3.11 /usr/bin/python
+    && ln -sf /usr/bin/python3.10 /usr/bin/python3 \
+    && ln -sf /usr/bin/python3.10 /usr/bin/python
 
-# Install pip for Python 3.11
-RUN curl -sS https://bootstrap.pypa.io/get-pip.py | python3.11
+# Upgrade pip
 RUN python -m pip install --upgrade pip setuptools wheel
 
-# Install T5X and MT3 first (they have older dependency requirements)
-# Clone and install T5X with modified setup (jax instead of jax[tpu])
+# Install core dependencies with PINNED versions that work together
+# This is the critical step - all versions must be mutually compatible
+RUN pip install --no-cache-dir \
+    "numpy==1.23.5" \
+    "scipy==1.10.1" \
+    "tensorflow==2.11.0" \
+    "flax==0.6.10" \
+    "optax==0.1.5" \
+    "chex==0.1.7" \
+    "orbax-checkpoint==0.2.3" \
+    "clu==0.0.8" \
+    "ml_dtypes==0.1.0" \
+    "jax==0.4.8" \
+    "jaxlib==0.4.7+cuda11.cudnn86" \
+    -f https://storage.googleapis.com/jax-releases/jax_cuda_releases.html
+
+# Install T5X with --no-deps to avoid overwriting our pinned versions
 RUN git clone --branch=main https://github.com/google-research/t5x.git /tmp/t5x && \
     cd /tmp/t5x && \
-    sed -i "s/jax\[tpu\]/jax/" setup.py && \
-    pip install --no-cache-dir -e . && \
+    pip install --no-cache-dir --no-deps -e . && \
     rm -rf /tmp/t5x/.git
 
-# Install MT3
+# Install MT3 with --no-deps
 RUN git clone --branch=main https://github.com/magenta/mt3.git /tmp/mt3 && \
     cd /tmp/mt3 && \
-    pip install --no-cache-dir -e . && \
+    pip install --no-cache-dir --no-deps -e . && \
     rm -rf /tmp/mt3/.git
 
-# Install additional dependencies BEFORE JAX upgrade
-COPY requirements.txt .
-RUN pip install --no-cache-dir -r requirements.txt
+# Install remaining dependencies (audio processing, etc.)
+RUN pip install --no-cache-dir \
+    "librosa==0.10.1" \
+    "soundfile==0.12.1" \
+    "note-seq==0.0.5" \
+    "gin-config==0.5.0" \
+    "pyfluidsynth==1.3.2" \
+    "nest-asyncio==1.6.0" \
+    "seqio==0.0.18" \
+    "t5==0.9.4" \
+    "tensorflow-text==2.11.0"
+
+# Install RunPod SDK and HTTP
+RUN pip install --no-cache-dir \
+    "runpod==1.7.7" \
+    "requests==2.32.3"
+
+# Install gsutil for downloading models
+RUN pip install --no-cache-dir gsutil
 
 # Download MT3 model checkpoints from Google Cloud Storage
-# This makes models part of the image for faster cold starts
 RUN mkdir -p /models && \
-    pip install --no-cache-dir gsutil && \
     gsutil -q -m cp -r gs://mt3/checkpoints/mt3 /models/ && \
     gsutil -q -m cp -r gs://mt3/checkpoints/ismir2021 /models/ && \
     gsutil -q -m cp gs://magentadata/soundfonts/SGM-v2.01-Sal-Guit-Bass-V1.3.sf2 /models/
@@ -76,40 +104,18 @@ RUN ls -la /models/ && \
 # Copy handler
 COPY handler.py .
 
-# Fix dependency conflicts: pin numpy and protobuf for tensorflow compatibility
-# Then install JAX with CUDA support (bundled CUDA libs, no local CUDA needed)
-RUN pip install --no-cache-dir \
-    "numpy==1.26.4" \
-    "protobuf>=3.20.3,<5.0.0"
-
-# Install JAX 0.4.35 with bundled CUDA 12 (works without system CUDA)
-RUN pip install --no-cache-dir \
-    "jax[cuda12_pip]==0.4.35" \
-    -f https://storage.googleapis.com/jax-releases/jax_cuda_releases.html
-
-# Downgrade Flax ecosystem to be compatible with JAX 0.4.35
-# T5X uses optax.ConditionallyTransformState which was added in optax 0.1.8+
-RUN pip install --no-cache-dir --force-reinstall \
-    "flax==0.8.5" \
-    "orbax-checkpoint==0.5.23" \
-    "chex==0.1.86" \
-    "optax==0.1.9" \
-    "ml_dtypes==0.4.0"
-
 # Verify versions are correct
 RUN python -c "\
 import numpy; print(f'numpy: {numpy.__version__}'); \
-import ml_dtypes; print(f'ml_dtypes: {ml_dtypes.__version__}'); \
+import tensorflow; print(f'tensorflow: {tensorflow.__version__}'); \
 import jax; print(f'jax: {jax.__version__}'); \
 import flax; print(f'flax: {flax.__version__}'); \
-import optax; print(f'optax: {optax.__version__}'); \
 "
 
-# Skip GPU verification during build (no GPU available in build environment)
-# GPU will be available at runtime on RunPod
-RUN JAX_PLATFORMS=cpu python -c "import jax; print('JAX import OK - GPU will be used at runtime')"
+# Verify JAX works (CPU mode during build)
+RUN JAX_PLATFORMS=cpu python -c "import jax; print('JAX import OK')"
 
-# Verify MT3 imports work (use CPU mode during build)
+# Verify MT3 imports work
 RUN JAX_PLATFORMS=cpu python -c "\
 from mt3 import models, network, spectrograms, vocabularies; \
 print('MT3 imports successful'); \
